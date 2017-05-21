@@ -8,7 +8,7 @@ import shutil
 
 from fuse import FuseOSError, Operations
 
-from util import encrypt, decrypt
+from .util import encrypt, decrypt
 
 #set for debug/dev
 KEY = 'AWaRttWO1t-YDQldf7ebZQkhy3AVy-xvME1WMVEb54E='
@@ -114,7 +114,7 @@ class EVFS(Operations):
     ##########################################################################
 
     def open(self, path, flags):
-        print "OPEN", path, flags
+        print("OPEN", path, flags)
         self.opens[path] += 1
 
         full_path = self._full_path(path)
@@ -133,7 +133,7 @@ class EVFS(Operations):
         return os.open(tmp_path, flags)
 
     def create(self, path, mode, fi=None):
-        print "CREATE", path, mode
+        print("CREATE", path, mode)
         #create both /tmp/path and /root/path
         full_path = self._full_path(path)
         tmp_path = self._tmp_full_path(path)
@@ -144,39 +144,39 @@ class EVFS(Operations):
         return os.open(tmp_path, os.O_WRONLY | os.O_CREAT, mode)
 
     def read(self, path, length, offset, fh):
-        print "READ", path, length, offset, fh
+        print("READ", path, length, offset, fh)
         #read from /tmp/path
         os.lseek(fh, offset, os.SEEK_SET)
         return os.read(fh, length)
 
     def write(self, path, buf, offset, fh):
-        print "WRITE", path, len(buf), offset, fh
+        print("WRITE", path, len(buf), offset, fh)
         #write to /tmp/path
         self.dirty[path] = True
         os.lseek(fh, offset, os.SEEK_SET)
         return os.write(fh, buf)
 
     def truncate(self, path, length, fh=None):
-        print "TRUNCATE", path, length, fh
+        print("TRUNCATE", path, length, fh)
         tmp_path = self._tmp_full_path(path)
         with open(tmp_path, 'r+') as f:
             f.truncate(length)
 
     def flush(self, path, fh):
-        print "FLUSH", path, fh
+        print("FLUSH", path, fh)
         return os.fsync(fh)
 
     def fsync(self, path, fdatasync, fh):
-        print "FSYNC", path, fdatasync, fh
+        print("FSYNC", path, fdatasync, fh)
         return self.flush(path, fh)
 
     def release(self, path, fh):
-        print "RELEASE", path, fh
+        print("RELEASE", path, fh)
         self.opens[path] -= 1
 
         # encrypt and write if dirty
         if self.dirty[path]:
-            print "TRYING TO WRITE"
+            print("TRYING TO WRITE")
             #copy enc(/tmp/path file) to /root/path
             with open(self._tmp_full_path(path), 'rb') as f:
                 data = f.read()
@@ -188,11 +188,11 @@ class EVFS(Operations):
         return os.close(fh)
 
     def cleanup(self):
-        print "RUNNING GARBAGE COLLECTION"
-        print self.opens
+        print("RUNNING GARBAGE COLLECTION")
+        print(self.opens)
 
         #TODO: make this threaded
-        for _file in self.opens.keys():
+        for _file in list(self.opens.keys()):
             if self.opens[_file] <= 0:
                 os.unlink(self._tmp_full_path(_file))
                 del self.opens[_file]

@@ -1,6 +1,6 @@
 __author__ = 'amirali'
 
-import util
+from . import util
 import base64
 import os
 
